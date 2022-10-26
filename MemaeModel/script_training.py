@@ -113,7 +113,7 @@ last_epoch = 0
 global_ite_idx = 0
 if len(os.listdir(saving_model_path)) != 0 and opt.UseExModel:
     print(saving_model_path)
-    PATH = utils.latest_checkpoint_path(saving_model_path)
+    PATH = os.listdir(saving_model_path)[0]
     checkpoint = torch.load(os.path.join(saving_model_path, PATH))
     model.load_state_dict(checkpoint['model_state_dict'])
     tr_optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
@@ -239,7 +239,7 @@ for epoch_idx in range(last_epoch, max_epoch_num):
                         'loss': loss,
                         'global_ite_idx': global_ite_idx,
                         },
-                       '%s/%d0%04d.pt' % (saving_model_path, epoch_idx, batch_idx))
+                       '%s.pt' % (PATH))
         global_ite_idx += 1
 
     if((epoch_idx % save_check_interval) == 0):
@@ -249,7 +249,7 @@ for epoch_idx in range(last_epoch, max_epoch_num):
                     'loss': loss,
                     'global_ite_idx': global_ite_idx,
                     },
-                   '%s/%d0%04d.pt' % (saving_model_path, epoch_idx, batch_idx+1))
+                   '%s.pt' % (PATH))
 
 torch.save({'epoch': epoch_idx,
             'model_state_dict': model.state_dict(),
@@ -257,4 +257,4 @@ torch.save({'epoch': epoch_idx,
             'loss': loss,
             'global_ite_idx': global_ite_idx,
             },
-           '%s/%d0%04d00.pt' % (saving_model_path, epoch_idx, batch_idx+1))
+           '%s.pt' % (PATH))
