@@ -1,0 +1,3 @@
+Looking in indexes: https://pypi.org/simple, https://us-python.pkg.dev/colab-wheels/public/simple/
+Requirement already satisfied: torch in /usr/local/lib/python3.7/dist-packages (1.12.1+cu113)
+Requirement already satisfied: typing-extensions in /usr/local/lib/python3.7/dist-packages (from torch) (4.1.1)

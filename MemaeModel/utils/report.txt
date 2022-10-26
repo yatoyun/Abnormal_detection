@@ -1,0 +1,31 @@
+TensorFlow 2.0 Upgrade Script
+-----------------------------
+Converted 1 files
+Detected 1 issues that require attention
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+File: ./logger1.py
+--------------------------------------------------------------------------------
+./logger1.py:34:12: WARNING: *.save requires manual check. (This warning is only applicable if the code saves a tf.Keras model) Keras model.save now saves to the Tensorflow SavedModel format by default, instead of HDF5. To continue saving to HDF5, add the argument save_format='h5' to the save() function.
+================================================================================
+Detailed log follows:
+
+================================================================================
+--------------------------------------------------------------------------------
+Processing file './logger1.py'
+ outputting to './logger1.py'
+--------------------------------------------------------------------------------
+
+15:22: INFO: tf.summary.FileWriter requires manual check. The TF 1.x summary API cannot be automatically migrated to TF 2.0, so symbols have been converted to tf.compat.v1.summary.* and must be migrated manually. Typical usage will only require changes to the summary writing logic, not to individual calls like scalar(). For examples of the new summary API, see the Effective TF 2.0 migration document or check the TF 2.0 TensorBoard tutorials.
+15:22: INFO: Renamed 'tf.summary.FileWriter' to 'tf.compat.v1.summary.FileWriter'
+19:18: INFO: Renamed 'tf.Summary' to 'tf.compat.v1.Summary'
+19:36: INFO: Renamed 'tf.Summary' to 'tf.compat.v1.Summary'
+34:12: WARNING: *.save requires manual check. (This warning is only applicable if the code saves a tf.Keras model) Keras model.save now saves to the Tensorflow SavedModel format by default, instead of HDF5. To continue saving to HDF5, add the argument save_format='h5' to the save() function.
+37:22: INFO: Renamed 'tf.Summary' to 'tf.compat.v1.Summary'
+41:33: INFO: Renamed 'tf.Summary' to 'tf.compat.v1.Summary'
+44:18: INFO: Renamed 'tf.Summary' to 'tf.compat.v1.Summary'
+54:15: INFO: Renamed 'tf.HistogramProto' to 'tf.compat.v1.HistogramProto'
+71:18: INFO: Renamed 'tf.Summary' to 'tf.compat.v1.Summary'
+71:36: INFO: Renamed 'tf.Summary' to 'tf.compat.v1.Summary'
+--------------------------------------------------------------------------------
+
