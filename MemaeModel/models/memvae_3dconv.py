@@ -214,19 +214,17 @@ class VariationalAutoEncoderCov3DMem(nn.Module):
         enc_t = self.enc_t(enc_b)
 
         quant_t = self.quantize_conv_t(enc_t)
-        # quant_t = quant_t.permute(0, 2, 3, 4, 1)
-        # quant_t, diff_t, id_t = self.quantize_t(quant_t)
-        # quant_t = quant_t.permute(0, 4, 1, 2, 3)
-        diff_t = id_t = 0
-        quant_t = self._neural_turing_memo_t(quant_t) # test
-        # diff_t = diff_t.unsqueeze(0)
+        quant_t = quant_t.permute(0, 2, 3, 4, 1)
+        quant_t, diff_t, id_t = self.quantize_t(quant_t)
+        quant_t = quant_t.permute(0, 4, 1, 2, 3)
+        # quant_t = self._neural_turing_memo_t(quant_t) # test
+        diff_t = diff_t.unsqueeze(0)
 
-        # quant_b = self.quantize_conv_b(enc_b).permute(0, 2, 3, 4, 1)
-        # quant_b, diff_b, id_b = self.quantize_b(quant_b)
-        # quant_b = quant_b.permute(0, 4, 1, 2, 3)
-        diff_b = id_b = 0
+        quant_b = self.quantize_conv_b(enc_b).permute(0, 2, 3, 4, 1)
+        quant_b, diff_b, id_b = self.quantize_b(quant_b)
+        quant_b = quant_b.permute(0, 4, 1, 2, 3)
         quant_b = self.quantize_conv_b(enc_b)
-        # diff_b = diff_b.unsqueeze(0)
+        diff_b = diff_b.unsqueeze(0)
 
         return quant_t, quant_b, diff_t + diff_b, id_t, id_b
 

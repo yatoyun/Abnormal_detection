@@ -80,7 +80,7 @@ if opt.Test:
 else:
     if len(os.listdir(model_path)) != 0:
         print(model_path)
-        PATH = utils.latest_checkpoint_path(model_path)
+        PATH = os.listdir(model_path)[0]
         checkpoint = torch.load(os.path.join(model_path, PATH))
         model.load_state_dict(checkpoint['model_state_dict'])
     else:
@@ -159,8 +159,8 @@ with torch.no_grad():
                 recon_error = np.mean(r ** 2)  # **0.5
                 recon_error_list += [recon_error]
             elif (opt.ModelName == 'MemAE'):
-                recon_res = model(frames)
-                recon_frames = recon_res['output']
+                recon_res, _ = model(frames)
+                # recon_frames = recon_res['output']
                 #print(recon_frames.size(), frames.size())
                 r = recon_frames - frames
                 # image

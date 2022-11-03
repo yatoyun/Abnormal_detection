@@ -111,6 +111,7 @@ device = torch.device("cuda" if use_cuda else "cpu")
 # reset
 last_epoch = 0
 global_ite_idx = 0
+PATH = "model_" + opt.ModelName
 if len(os.listdir(saving_model_path)) != 0 and opt.UseExModel:
     print(saving_model_path)
     PATH = os.listdir(saving_model_path)[0]
@@ -185,9 +186,9 @@ for epoch_idx in range(last_epoch, max_epoch_num):
             # entropy_loss_val = entropy_loss.item()
             # loss = loss + entropy_loss_weight * entropy_loss
             if opt.Loss == "ssim":
-                loss = 1 - tr_recon_loss_func(recon_frames, frames)
+                recon_loss_val = 1 - tr_recon_loss_func(recon_frames, frames)
             else:
-                loss = tr_recon_loss_func(recon_frames, frames)
+                recon_loss_val = tr_recon_loss_func(recon_frames, frames)
             #latent
             try:
                 latent_loss = latent_loss.mean()
@@ -208,7 +209,7 @@ for epoch_idx in range(last_epoch, max_epoch_num):
             tb_info = {
                 'loss': loss_val,
                 'recon_loss': recon_loss_val,
-                'entropy_loss': entropy_loss_val
+                #'entropy_loss': entropy_loss_val
             }
             for tag, value in tb_info.items():
                 tb_logger.scalar_summary(tag, value, global_ite_idx)
@@ -228,8 +229,8 @@ for epoch_idx in range(last_epoch, max_epoch_num):
                     tb_logger.image_summary(tag, imgs, global_ite_idx)
         ##
         if((batch_idx % textlog_interval) == 0):
-            print('[%s, epoch %d/%d, bt %d/%d] loss=%f, rc_losss=%f, ent_loss=%f'% (model_setting, epoch_idx,
-                  max_epoch_num, batch_idx, data_loader_len, loss_val, recon_loss_val, entropy_loss_val))
+            print('[%s, epoch %d/%d, bt %d/%d] loss=%f, rc_losss=%f, ent_loss=0'% (model_setting, epoch_idx,
+                  max_epoch_num, batch_idx, data_loader_len, loss_val, recon_loss_val))
 
         if((global_ite_idx % snap_save_interval) == 0):
             utils.mkdir(saving_model_path)
@@ -239,7 +240,7 @@ for epoch_idx in range(last_epoch, max_epoch_num):
                         'loss': loss,
                         'global_ite_idx': global_ite_idx,
                         },
-                       '%s.pt' % (PATH))
+                       '%s/%s' % (saving_model_path,PATH))
         global_ite_idx += 1
 
     if((epoch_idx % save_check_interval) == 0):
@@ -249,7 +250,7 @@ for epoch_idx in range(last_epoch, max_epoch_num):
                     'loss': loss,
                     'global_ite_idx': global_ite_idx,
                     },
-                   '%s.pt' % (PATH))
+                   '%s/%s' % (saving_model_path,PATH))
 
 torch.save({'epoch': epoch_idx,
             'model_state_dict': model.state_dict(),
@@ -257,4 +258,4 @@ torch.save({'epoch': epoch_idx,
             'loss': loss,
             'global_ite_idx': global_ite_idx,
             },
-           '%s.pt' % (PATH))
+           '%s/%s' % (saving_model_path,PATH))
