@@ -62,14 +62,14 @@ else:
     tr_recon_loss_func = nn.MSELoss(reduction='none')
 
 # loading trained model
-if (opt.ModelName == 'AE'):
-    model = AutoEncoderCov3D(chnum_in_)
-elif(opt.ModelName == 'MemAE'):
+if(opt.ModelName == 'MemAE'):
     model = AutoEncoderCov3DMem(
         chnum_in_, mem_dim_in, shrink_thres=sparse_shrink_thres)
 elif(opt.ModelName == 'MemVAE'):
     model = VariationalAutoEncoderCov3DMem(
         chnum_in_, mem_dim_in, shrink_thres=sparse_shrink_thres)
+elif(opt.ModelName == 'ssmctb'):
+    model = SSMCTB(chnum_in_)
 else:
     model = []
     print('Wrong Name.')
@@ -146,139 +146,13 @@ with torch.no_grad():
             ######
             frames = frames.to(device)
             ##
-            if (opt.ModelName == 'AE'):
-                recon_frames = model(frames)
-                # calculate reconstruction error (MSE)
-                recon_np = utils.vframes2imgs(unorm_trans(
-                    recon_frames.data), step=1, batch_idx=0)
-                input_np = utils.vframes2imgs(
-                    unorm_trans(frames.data), step=1, batch_idx=0)
-                r = utils.crop_image(recon_np, img_crop_size) - \
-                    utils.crop_image(input_np, img_crop_size)
-                # recon_error = np.mean(sum(r**2)**0.5)
-                recon_error = np.mean(r ** 2)  # **0.5
-                recon_error_list += [recon_error]
-            elif (opt.ModelName == 'MemAE'):
+            if (opt.ModelName == 'MemAE'):
                 recon_res, _ = model(frames)
                 # recon_frames = recon_res['output']
                 #print(recon_frames.size(), frames.size())
-                r = recon_frames - frames
-                # image
-                #frames_recon_vis = utils.vframes2imgs(unorm_trans(recon_frames.data), step=5, batch_idx=0)
-                #frames_recon_vis = np.concatenate(frames_recon_vis, axis=-1)
-                #frames_recon_vis = frames_recon_vis[None, :, :] * np.ones(3, dtype=int)[:, None, None]
-                utils.mkdir(os.path.join(te_res_path, video_name))
-
-                #recon_frames = recon_frames.cpu().numpy()
-                #print("size : ", recon_frames.size())
-                #for k, (recon_frame, frame) in enumerate(np.array(recon_frames.squeeze()), np.array(frames.squeeze())):
-                mseimgs = []
-                for i in range(recon_frames.shape[2]):
-                    #mseimg = (loss_func_mse(recon_frames[0,:,i], frames[0,:,i])[0].cpu().detach().numpy())
-
-                    #mseimg = mseimg[:,:,np.newaxis]
-                    #mseimg = (mseimg - np.min(mseimg)) / (np.max(mseimg)-np.min(mseimg))
-                    img = frames[0,:,i].cpu().numpy().squeeze()
-                    output = recon_frames[0,:,i].cpu().numpy().squeeze()
-                    mseimg = np.abs(output*255-img*255)
-                    mseimg = mseimg.astype(dtype=np.uint8)
-                    #img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-
-                    #plot
-                    plt.imshow(img, cmap=plt.cm.gray) #interpolation='nearest'
-                    H = signal.convolve2d(mseimg.squeeze(), np.ones((6,6)), mode='same')
-                    x, y = np.where(H > threshold)
-                    plt.scatter(y,x,color='red',s=0.04)
-                    plt.axis('off')
-
-                    plt.savefig(os.path.join(os.path.join(te_res_path,video_name), 'MSE_{:04d}.jpg').format(batch_idx))
-                    plt.close()
-                    mseimgs.append(mseimg)
-                """mseimgs = np.array(mseimgs).squeeze()
-                recon_frames = recon_frames.squeeze().cpu().numpy()
-                frames = frames.squeeze().cpu().numpy()
-                #color_mseimgs = cv2.applyColorMap(mseimgs, cv2.COLORMAP_JET)
-                #print("mse shape : ",mseimgs.shape)
-                #print("frame shape : ", recon_frames.shape)
-                for (org_img, f_diff) in zip(frames, mseimgs):
-                    #color_map = plt.get_cmap("viridis")
-                    heatmap = cv2.applyColorMap(f_diff, cv2.COLORMAP_JET)
-                    heatmap = cv2.blur(heatmap,(9,9))
-                    mask = cv2.cvtColor(heatmap,cv2.COLOR_BGR2GRAY)
-                    ret, mask = cv2.threshold((mask), 200, 255, cv2.THRESH_BINARY)
-                    mask_inv = cv2.bitwise_not(mask)
-                    #heatmap = np.uint8(color_map(f_diff * 255))
-                    heatmap2 = cv2.applyColorMap(f_diff*255, cv2.COLORMAP_HOT)
-                    org_img = cv2.cvtColor(org_img*255,cv2.COLOR_GRAY2RGB)
-                    img1_bg = cv2.bitwise_and(org_img,org_img,mask = mask_inv).astype(dtype=np.uint8)
-                    img2_fg = cv2.bitwise_and(heatmap2,heatmap2,mask = mask)
-                    #print("img1_bg shape : ",img1_bg.shape)
-                    #print("img2_fg shape : ", img2_fg.shape)
-                    dst = cv2.add(img1_bg,img2_fg)
-                    transposed = org_img#.transpose(1, 2, 0)[:, :, [2, 1, 0]]
-                    resized = cv2.resize(
-                        heatmap, (transposed.shape[0], transposed.shape[1])
-                    )
-                    transposed = cv2.cvtColor(transposed, cv2.COLOR_GRAY2RGB)
-                    blended = cv2.addWeighted(
-                        transposed, 1.0, resized, 0.01, 2.2, dtype=cv2.CV_32F
-                    )
-                    blended_normed = (
-                        255 * (blended - blended.min()) /
-                        (blended.max() - blended.min())
-                    )
-                    blended_out = np.array(blended_normed, np.int64)"""
-                    #cv2.imwrite(os.path.join(os.path.join(te_res_path,video_name), 'MSE_{:04d}.jpg').format(batch_idx), blended_out)
-                    # save.write(np.array(img_convert.toimage(img)))
-                ###
-                r = utils.crop_image(r, img_crop_size)
-                sp_error_map = torch.sum(r**2, dim=1)**0.5
-                s = sp_error_map.size()
-                sp_error_vec = sp_error_map.view(s[0], -1)
-                recon_error = torch.mean(sp_error_vec, dim=-1)
-                recon_error_list += recon_error.cpu().tolist()
             elif(opt.ModelName == 'MemVAE'):
                 recon_res, _ = model(frames)
                 recon_frames = recon_res
-                #print(recon_frames.size(), frames.size())
-                r = recon_frames - frames
-                # image
-                #frames_recon_vis = utils.vframes2imgs(unorm_trans(recon_frames.data), step=5, batch_idx=0)
-                #frames_recon_vis = np.concatenate(frames_recon_vis, axis=-1)
-                #frames_recon_vis = frames_recon_vis[None, :, :] * np.ones(3, dtype=int)[:, None, None]
-                utils.mkdir(os.path.join(te_res_path, video_name))
-
-                #recon_frames = recon_frames.cpu().numpy()
-                #print("size : ", recon_frames.size())
-                #for k, (recon_frame, frame) in enumerate(np.array(recon_frames.squeeze()), np.array(frames.squeeze())):
-                mseimgs = []
-                for i in range(recon_frames.shape[2]):
-                    #mseimg = (loss_func_mse(recon_frames[0,:,i], frames[0,:,i])[0].cpu().detach().numpy())
-
-                    #mseimg = mseimg[:,:,np.newaxis]
-                    #mseimg = (mseimg - np.min(mseimg)) / (np.max(mseimg)-np.min(mseimg))
-                    img = frames[0,:,i].cpu().numpy().squeeze()
-                    output = recon_frames[0,:,i].cpu().numpy().squeeze()
-                    mseimg = np.abs(output*255-img*255)
-                    mseimg = mseimg.astype(dtype=np.uint8)
-                    #img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-
-                    #plot
-                    plt.imshow(img, cmap=plt.cm.gray) #interpolation='nearest'
-                    H = signal.convolve2d(mseimg.squeeze(), np.ones((6,6)), mode='same')
-                    x, y = np.where(H > threshold)
-                    plt.scatter(y,x,color='red',s=0.04)
-                    plt.axis('off')
-
-                    plt.savefig(os.path.join(os.path.join(te_res_path,video_name), 'MSE_{:04d}.jpg').format(batch_idx))
-                    plt.close()
-                    mseimgs.append(mseimg)
-                r = utils.crop_image(r, img_crop_size)
-                sp_error_map = torch.sum(r**2, dim=1)**0.5
-                s = sp_error_map.size()
-                sp_error_vec = sp_error_map.view(s[0], -1)
-                recon_error = torch.mean(sp_error_vec, dim=-1)
-                recon_error_list += recon_error.cpu().tolist()
             ######
             # elif (opt.ModelName == 'MemAE'):
             #     recon_res = model(frames)
@@ -295,6 +169,51 @@ with torch.no_grad():
             else:
                 recon_error = -1
                 print('Wrong ModelName.')
+                
+                
+            r = recon_frames - frames
+            # image
+            #frames_recon_vis = utils.vframes2imgs(unorm_trans(recon_frames.data), step=5, batch_idx=0)
+            #frames_recon_vis = np.concatenate(frames_recon_vis, axis=-1)
+            #frames_recon_vis = frames_recon_vis[None, :, :] * np.ones(3, dtype=int)[:, None, None]
+            utils.mkdir(os.path.join(te_res_path, video_name))
+
+            #recon_frames = recon_frames.cpu().numpy()
+            #print("size : ", recon_frames.size())
+            #for k, (recon_frame, frame) in enumerate(np.array(recon_frames.squeeze()), np.array(frames.squeeze())):
+            mseimgs = []
+            for i in range(recon_frames.shape[2]):
+                #mseimg = (loss_func_mse(recon_frames[0,:,i], frames[0,:,i])[0].cpu().detach().numpy())
+
+                #mseimg = mseimg[:,:,np.newaxis]
+                #mseimg = (mseimg - np.min(mseimg)) / (np.max(mseimg)-np.min(mseimg))
+                img = frames[0,:,i].cpu().numpy().squeeze()
+                output = recon_frames[0,:,i].cpu().numpy().squeeze()
+                mseimg = np.abs(output*255-img*255)
+                mseimg = mseimg.astype(dtype=np.uint8)
+                #img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+                #plot
+                plt.imshow(img, cmap=plt.cm.gray) #interpolation='nearest'
+                H = signal.convolve2d(mseimg.squeeze(), np.ones((6,6)), mode='same')
+                x, y = np.where(H > threshold)
+                plt.scatter(y,x,color='red',s=0.04)
+                plt.axis('off')
+
+                plt.savefig(os.path.join(os.path.join(te_res_path,video_name), 'MSE_{:04d}.jpg').format(batch_idx))
+                plt.close()
+                mseimgs.append(mseimg)
+
+                #cv2.imwrite(os.path.join(os.path.join(te_res_path,video_name), 'MSE_{:04d}.jpg').format(batch_idx), blended_out)
+                # save.write(np.array(img_convert.toimage(img)))
+            ###
+            r = utils.crop_image(r, img_crop_size)
+            sp_error_map = torch.sum(r**2, dim=1)**0.5
+            s = sp_error_map.size()
+            sp_error_vec = sp_error_map.view(s[0], -1)
+            recon_error = torch.mean(sp_error_vec, dim=-1)
+            recon_error_list += recon_error.cpu().tolist()
+            
         np.save(os.path.join(te_res_path, video_name + '.npy'), recon_error_list)
         # save.release()
 

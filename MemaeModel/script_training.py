@@ -10,10 +10,9 @@ import scipy.io as sio
 from options.training_options import TrainOptions
 import utils
 import time
-from models import AutoEncoderCov3D, AutoEncoderCov3DMem, VariationalAutoEncoderCov3DMem
+from models import AutoEncoderCov3DMem, VariationalAutoEncoderCov3DMem, SSMCTB
 from models import EntropyLossEncap, KLDLoss
 from summary import summary
-from piqa.ssim import SSIM
 
 ###
 opt_parser = TrainOptions()
@@ -97,6 +96,8 @@ if(opt.ModelName == 'MemAE'):
 elif(opt.ModelName == 'MemVAE'):
     model = VariationalAutoEncoderCov3DMem(
         chnum_in_, mem_dim_in, shrink_thres=sparse_shrink_thres)
+elif(opt.ModelName == 'ssmctb'):
+    model = SSMCTB(chnum_in_)
 else:
     model = []
     print('Wrong model name.')
@@ -129,12 +130,7 @@ if len(os.listdir(saving_model_path)) != 0 and opt.UseExModel:
 
 #########
 model.to(device)
-if opt.Loss == "ssim":
-    tr_recon_loss_func = SSIM(n_channels=1).to(device)
-    from piqa.utils import set_debug
-    set_debug(False)
-else:
-    tr_recon_loss_func = nn.MSELoss().to(device)
+tr_recon_loss_func = nn.MSELoss().to(device)
 tr_entropy_loss_func = EntropyLossEncap().to(device)
 latent_loss_weight = 0.25
 
@@ -159,10 +155,7 @@ for epoch_idx in range(last_epoch, max_epoch_num):
             recon_res = model(frames)
             recon_frames = recon_res['output']
             att_w = recon_res['att']
-            if opt.Loss == "ssim":
-                loss = 1 - tr_recon_loss_func(recon_frames, frames)
-            else:
-                loss = tr_recon_loss_func(recon_frames, frames)
+            loss = tr_recon_loss_func(recon_frames, frames)
             recon_loss_val = loss.item()
             entropy_loss = tr_entropy_loss_func(att_w)
             entropy_loss_val = entropy_loss.item()
@@ -175,35 +168,31 @@ for epoch_idx in range(last_epoch, max_epoch_num):
             tr_optimizer.step()
             ##
         elif(opt.ModelName == "MemVAE"):
-            #recon_res, latent_loss, att_w = model(frames)
+            
             recon_frames, latent_loss = model(frames)
-            # recon_frames = recon_res['output']
-            # att_w = recon_res['att']
-            # loss = tr_recon_loss_func(recon_frames, frames)
-            # recon_loss_val = loss.item()
-            # recon_loss_val = recon_loss_val #+ KLD
-            # entropy_loss = tr_entropy_loss_func(att_w)
-            # entropy_loss_val = entropy_loss.item()
-            # loss = loss + entropy_loss_weight * entropy_loss
-            if opt.Loss == "ssim":
-                recon_loss_val = 1 - tr_recon_loss_func(recon_frames, frames)
-            else:
-                recon_loss_val = tr_recon_loss_func(recon_frames, frames)
+            recon_loss_val = tr_recon_loss_func(recon_frames, frames)
             #latent
             try:
                 latent_loss = latent_loss.mean()
             except:
                 latent_loss =  0
-            #entorpy
-            # entropy_loss = tr_entropy_loss_func(att_w)
-            # entropy_loss_val = entropy_loss.item()
             #total loss
-            loss = recon_loss_val + latent_loss * latent_loss_weight #+ entropy_loss_weight * entropy_loss
+            loss = recon_loss_val + latent_loss * latent_loss_weight
             loss_val = loss.item()
             ##
             tr_optimizer.zero_grad()
             loss.backward()
             tr_optimizer.step()
+            
+        elif(opt.ModelName == "ssmctb"):
+            recon_frames, loss = model(frames)
+            #loss = tr_recon_loss_func(recon_frames, frames)
+            recon_loss_val = loss
+            loss_val = loss
+            tr_optimizer.zero_grad()
+            loss.backward()
+            tr_optimizer.step()
+            
         # TB log val
         if(opt.IsTbLog):
             tb_info = {
